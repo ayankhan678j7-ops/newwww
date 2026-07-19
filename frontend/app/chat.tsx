@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, ActivityIndicator, Pressable } from 'react-native';
+import { KeyboardAvoidingView, KeyboardEvents } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -246,6 +247,24 @@ export default function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-scroll to the newest message when the software keyboard finishes
+  // showing, so the last bubble is never hidden behind the input.
+  // Listener is wrapped in try/catch and cleaned up on unmount to avoid
+  // crashes and memory leaks on either platform.
+  useEffect(() => {
+    let sub: { remove: () => void } | undefined;
+    try {
+      sub = KeyboardEvents.addListener('keyboardDidShow', () => {
+        try { scrollRef.current?.scrollToEnd({ animated: true }); } catch {}
+      });
+    } catch {
+      // KeyboardEvents may not be available in some hosts (rare); fail silent.
+    }
+    return () => {
+      try { sub?.remove(); } catch {}
+    };
+  }, []);
+
   const suggestions = useMemo(() => assistant.suggestions ?? [], [assistant]);
 
   return (
@@ -276,7 +295,11 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} keyboardVerticalOffset={0}>
+      <KeyboardAvoidingView
+        behavior="translate-with-padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={0}
+      >
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: 20 }}

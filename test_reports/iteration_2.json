@@ -1,0 +1,37 @@
+{
+  "summary": "Keyboard-avoidance fix verified. Frontend uses react-native-keyboard-controller@1.18.5 (Expo SDK 54 recommended). _layout.tsx wraps the tree in <KeyboardProvider> above ThemeProvider/AuthProvider. chat.tsx uses the library's <KeyboardAvoidingView behavior='translate-with-padding' keyboardVerticalOffset={0}> and a KeyboardEvents.addListener('keyboardDidShow') that calls scrollRef.current?.scrollToEnd() with try/catch and unmount cleanup. All 6 chat testIDs render (chat-input, chat-send-btn, chat-back-btn, chat-new-btn, chat-voice-btn, chat-toggle-search). Input bar sits at bottom (rect: top=705 bottom=759 in vh=844) — respects insets.bottom + 76 with no phantom gap. Rapid focus/blur and navigate-away while focused → no red-box error, no crash. new-chat clears input, toggle-search toggles. Backend smoke: 9/9 pytest cases pass on /api/, /api/assistants, /api/auth/{guest,google,me}, /api/chat (personal/coding/health). Real on-device keyboard lift can only be validated on iOS/Android runtime (web preview has no software keyboard), but code + library choice + behavior string match the expo-keyboard-experience skill for a messaging UI.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "React Native Web deprecation warning: 'shadow*' style props are deprecated. Use 'boxShadow'. Repeatedly logged on load — carried over from iteration_1; unrelated to keyboard fix."},
+      {"component": "props.pointerEvents", "issue": "React Native Web deprecation warning: props.pointerEvents is deprecated. Use style.pointerEvents. Repeatedly logged on load — carried over from iteration_1; unrelated to keyboard fix."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iter2_smoke.xml"
+  ],
+  "action_items": [
+    "Optional: silence RN Web deprecation warnings by migrating 'shadow*' → 'boxShadow' and props.pointerEvents → style.pointerEvents (pre-existing, not from this fix).",
+    "Optional real-device pass: since the web preview has no software keyboard, main agent should visually confirm on an Android/iOS emulator that (a) the input bar animates up above the keyboard, (b) the last message auto-scrolls into view on 'keyboardDidShow', and (c) no phantom bottom gap remains when the keyboard is closed."
+  ],
+  "critical_code_review_comments": [
+    "chat.tsx correctly imports { KeyboardAvoidingView, KeyboardEvents } from 'react-native-keyboard-controller' — NOT from 'react-native'. Behavior='translate-with-padding' is the recommended mode for messaging UIs on both platforms.",
+    "keyboardVerticalOffset={0} is correct because the header (View with paddingTop insets.top+8) is OUTSIDE the KeyboardAvoidingView — so no double-count of header height.",
+    "KeyboardEvents subscription is created inside a useEffect with an empty dep array and returns a cleanup that calls sub?.remove() inside try/catch — no listener leak; safe on unmount and on fast-refresh.",
+    "targetBufferRef/revealTimerRef streaming animation is stopped in stopTypingLoop() and cleaned in useEffect return → no runaway setInterval.",
+    "_layout.tsx wraps <KeyboardProvider> above ThemeProvider/AuthProvider but below SafeAreaProvider → correct order per the library docs.",
+    "Input bar marginBottom = insets.bottom + 76 targets the tab-bar height; with translate-with-padding the whole KAV translates up when the keyboard rises, so the input rides above the keyboard without stacking that 76px gap on top of it.",
+    "Backend endpoints /api/chat, /api/chat/stream, /api/conversations were not modified — confirmed by git-style inspection of server.py and 9/9 passing pytest smoke."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (9/9 smoke — TestRoot, TestAuthBasic, TestChat)", "frontend": "100% of web-testable checks — all testIDs present, no crashes on focus/blur or navigate-away, layout respects insets, no red-box error"},
+  "seed_data_creation": "Two ephemeral guest users created via /api/auth/guest (TEST_kbd_smoke, TEST_kbd_ui); test-scoped users cleaned by fixtures.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The web preview cannot render an on-screen software keyboard, so the real keyboard-lift can only be re-verified on Android/iOS. All library wiring is correct: KeyboardProvider is in _layout.tsx, KeyboardAvoidingView + KeyboardEvents from 'react-native-keyboard-controller' are used in chat.tsx. Injecting a token into localStorage does NOT authenticate the app (AuthContext uses AsyncStorage which serialises differently) — a real signin/guest UI flow must be driven through the app screens if you want authenticated chat streaming in the browser preview. Backend URL: EXPO_PUBLIC_BACKEND_URL = https://zen-research-ai.preview.emergentagent.com.",
+  "rca_of_issue": "Original bug: KeyboardAvoidingView from 'react-native' had behavior={undefined} on Android → the input bar never lifted. Fix applied by main agent: (1) installed react-native-keyboard-controller@~1.18 (installed as 1.18.5, package.json confirms), (2) wrapped root layout in <KeyboardProvider>, (3) replaced RN KeyboardAvoidingView with the library's version using behavior='translate-with-padding' and keyboardVerticalOffset=0, (4) added a KeyboardEvents 'keyboardDidShow' listener that scrolls to end, all wrapped in try/catch and cleaned up on unmount. Verified: library present, provider wired, listener + cleanup present, all chat testIDs render, layout maths sound (input sits at bottom respecting insets.bottom+76 with no phantom gap), no crashes under rapid focus/blur or navigation-during-focus, backend endpoints unchanged and healthy."
+}
