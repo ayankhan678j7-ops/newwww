@@ -221,6 +221,23 @@ export default function ChatScreen() {
     }));
   };
 
+  const startNewChat = () => {
+    // Stop any in-flight stream first — do NOT lose backend history.
+    if (busy) stopGeneration();
+    if (Platform.OS !== 'web') { try { Haptics.selectionAsync(); } catch {} }
+    // Wipe only the local screen state; every message is already persisted
+    // on the backend under this assistant's own history so it stays
+    // available from the History tab and from this assistant later.
+    targetBufferRef.current = {};
+    activeStreamIdRef.current = null;
+    setMessages([]);
+    setConvId(undefined);
+    setText('');
+    // Also drop any incoming ?conversation= param so a re-render doesn't
+    // reload the previous conversation.
+    router.setParams({ conversation: undefined });
+  };
+
   useEffect(() => {
     if (params.prompt && messages.length === 0 && !params.conversation) {
       send(params.prompt as string);
@@ -245,6 +262,14 @@ export default function ChatScreen() {
             {busy ? 'Generating…' : assistant.tagline}
           </Text>
         </View>
+        <TouchableOpacity
+          testID="chat-new-btn"
+          onPress={startNewChat}
+          accessibilityLabel="Start a new chat"
+          style={[styles.iconBtn, { backgroundColor: c.surface, borderColor: c.border }]}
+        >
+          <Ionicons name="create-outline" size={20} color={c.text} />
+        </TouchableOpacity>
         <TouchableOpacity testID="chat-voice-btn" onPress={() => router.push('/voice')} style={[styles.iconBtn, { backgroundColor: c.surface, borderColor: c.border }]}>
           <Ionicons name="mic" size={20} color={c.primary} />
         </TouchableOpacity>
