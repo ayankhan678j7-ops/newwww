@@ -1,0 +1,161 @@
+{
+  "theme_strategy": {
+    "default": "dark",
+    "toggle": true,
+    "archetype": "Electric & Neon (Future, Speed, AI) / Luxury",
+    "description": "A premium, cinematic AI-assistant experience with a signature animated glowing orb, deep blues/violets with cyan accents. Material 3 spirit with adaptive glassmorphism."
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Outfit, sans-serif",
+        "weight": "800",
+        "classes": "font-sans tracking-tight"
+      },
+      "body": {
+        "family": "Figtree, sans-serif",
+        "weight": "400",
+        "classes": "font-sans leading-relaxed tracking-normal"
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "classes": "font-mono text-sm"
+      }
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-extrabold tracking-tighter",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl font-semibold",
+      "h4": "text-lg font-medium",
+      "body": "text-base",
+      "small": "text-sm text-muted-foreground",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em] text-primary"
+    }
+  },
+  "colors": {
+    "dark": {
+      "background": "#0B0F19",
+      "surface": "#131B2B",
+      "surfaceHighlight": "#1E293B",
+      "primary": "#6366F1",
+      "primaryGlow": "rgba(99, 102, 241, 0.5)",
+      "secondary": "#06B6D4",
+      "text": "#F8FAFC",
+      "textMuted": "#94A3B8",
+      "border": "#1E293B",
+      "glass": "rgba(19, 27, 43, 0.65)",
+      "error": "#EF4444",
+      "success": "#10B981"
+    },
+    "light": {
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "surfaceHighlight": "#F1F5F9",
+      "primary": "#4F46E5",
+      "primaryGlow": "rgba(79, 70, 229, 0.3)",
+      "secondary": "#0891B2",
+      "text": "#0F172A",
+      "textMuted": "#64748B",
+      "border": "#E2E8F0",
+      "glass": "rgba(255, 255, 255, 0.75)",
+      "error": "#DC2626",
+      "success": "#059669"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "description": "Adaptive Material 3 Glassmorphism restricted to floating overlays (Bottom Nav, Sticky Headers, Dialogs) to maintain performance and readability.",
+      "classes_dark": "bg-[#131B2B]/70 backdrop-blur-2xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]",
+      "classes_light": "bg-white/70 backdrop-blur-2xl backdrop-saturate-150 border border-black/5 shadow-sm"
+    },
+    "ai_orb": {
+      "description": "Central visual anchor representing Sarvam AI. Uses Framer Motion for breathing/pulsing effects.",
+      "implementation": "Framer Motion animated div. Pulse scaling (0.95 to 1.05), slow rotation (360deg over 20s), box-shadow glow transition between Cyan and Violet."
+    },
+    "surface_cards": {
+      "description": "Solid surfaces for dense content. 1px border. No glass to ensure WCAG text readability.",
+      "classes": "bg-surface border border-border rounded-2xl shadow-sm"
+    }
+  },
+  "components": {
+    "bottom_nav": {
+      "style": "Floating glassmorphic pill at the bottom of the screen. Fixed position, z-50. Padding-4.",
+      "active_state": "Primary color icon with subtle under-glow.",
+      "classes": "fixed bottom-6 left-4 right-4 rounded-full flex justify-around items-center h-16"
+    },
+    "assistant_card": {
+      "style": "Bento-style grid item. Solid surface.",
+      "interactions": "Hover/Press: slight scale down (-translate-y-1 or scale-95) and border color shift to primary/50.",
+      "layout": "Flex column, gap-3, p-5. Icon top left (lucide-react), title, short description.",
+      "badge": "For 'Coming Soon' or 'Beta', use a tiny uppercase badge top-right."
+    },
+    "chat_bubble": {
+      "user": "bg-primary text-white rounded-2xl rounded-tr-sm ml-auto max-w-[85%] p-4 shadow-sm",
+      "ai": "bg-surface border border-border text-foreground rounded-2xl rounded-tl-sm mr-auto max-w-[85%] p-4 shadow-sm",
+      "streaming": "Add a typing indicator or subtle pulse at the end of the text."
+    },
+    "input_bar": {
+      "style": "Floating glass pill above bottom nav or fixed at bottom in chat view.",
+      "layout": "Flex row, items-center, gap-2. Contains text input, attach (clip), and voice (mic) prominent button."
+    },
+    "buttons": {
+      "primary": "bg-primary text-white hover:bg-primary/90 rounded-full px-6 py-3 font-semibold transition-transform active:scale-95",
+      "secondary": "bg-surfaceHighlight text-foreground rounded-full px-6 py-3 font-semibold hover:bg-border transition-transform active:scale-95"
+    }
+  },
+  "layouts": {
+    "splash_onboarding": "Full screen dark background. Massive AI orb in center. Fade-in typography. Swipe to continue.",
+    "dashboard": "Mobile-first standard. Top: sticky glass header + small orb + Profile. Middle: Search bar + Scrollable Categories + Bento grid of 40+ assistants. Bottom: Padding for nav.",
+    "chat_screen": "Top: Glass header with Assistant Info + Back button. Middle: Scrollable chat list with generous padding. Bottom: Sticky input area.",
+    "voice_mode": "Immersive full screen. Massive pulsing AI Orb in center. Audio waveform at bottom. Transparent controls overlay.",
+    "memory_screen": "List layout grouped by categories. Edit/Delete swipe actions.",
+    "settings_screen": "Grouped list items, solid cards, clear toggles."
+  },
+  "motion": {
+    "page_transition": "Fade and slight slide-up (y: 20 -> 0, opacity: 0 -> 1) using Framer Motion.",
+    "staggered_list": "Assistants grid items fade in sequentially (staggerChildren: 0.05).",
+    "micro_interactions": "Tap states scale down to 0.95. Haptic feedback simulated visually with quick ripple or opacity flash.",
+    "accessibility": "Respect prefers-reduced-motion CSS query."
+  },
+  "media": {
+    "icons_library": "lucide-react",
+    "image_urls": {
+      "ai_orb_texture": {
+        "url": "https://images.unsplash.com/photo-1763596396590-81193928cdeb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMGdsb3dpbmclMjBvcmIlMjBjeWFuJTIwcHVycGxlfGVufDB8fHx8MTc4NDQyNjIyM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract dark orb with glowing rings for Splash and Voice screens"
+      },
+      "dark_texture": {
+        "url": "https://images.unsplash.com/photo-1710438399422-2fca27686bcd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwxfHxkYXJrJTIwZnV0dXJpc3RpYyUyMGFic3RyYWN0JTIwdGV4dHVyZXxlbnwwfHx8fDE3ODQ0MjYyMjN8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Subtle futuristic wavy texture for background overlays to kill digital flatness"
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build as a responsive mobile web app using React and Tailwind CSS. Use .js/.jsx extensions.",
+    "Simulate mobile app feel: disable text selection (select-none) on UI elements, hide scrollbars (scrollbar-hide).",
+    "Use Framer Motion for the animated AI Orb, page transitions, and list staggering.",
+    "Implement adaptive Material 3 Glassmorphism ONLY on floating elements (Bottom Nav, sticky headers, dialogs). Keep main content cards solid for text legibility.",
+    "DO NOT use pure transparent backgrounds for overlays. Always use backdrop-blur + semi-transparent fill + 1px border.",
+    "Ensure all fonts are highly legible on mobile. Add tracking-tight to headings.",
+    "Use lucide-react for all 40+ categorized AI assistant icons.",
+    "All interactive elements MUST include `data-testid` attributes (kebab-case, role-based).",
+    "Build a unified AI chat brain interface that accepts a system prompt depending on the selected assistant.",
+    "Ensure the design supports light and dark themes via Tailwind's dark mode classes.",
+    "Structure bottom navigation fixed at the bottom with proper safe-area padding."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not use generic centered layouts or simplistic gradients.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use high-end glass-morphism effects (backdrop-blur-2xl + backdrop-saturate-150 + subtle inner borders) only on overlays.",
+    "NEVER use AI assistant Emoji characters (like 🤖🧠💭) for icons. Always use lucide-react.",
+    "Use 2-3x more spacing than typical. Cramped designs look cheap.",
+    "Avoid 'transition: all'. Target specific properties (e.g., transition-transform, transition-colors).",
+    "Use sonner for toast notifications.",
+    "Do not add `.App { text-align: center; }` to global CSS."
+  ],
+  "accessibility": {
+    "contrast": "Ensure text over glassmorphism has minimum 4.5:1 contrast. Use Text Shadow if necessary.",
+    "focus": "Focus rings must be visible. focus:ring-2 focus:ring-primary focus:ring-offset-2",
+    "aria": "Add aria-labels to icon-only buttons (Mic, Send, Nav items)."
+  }
+}
