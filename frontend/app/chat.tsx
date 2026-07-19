@@ -9,6 +9,7 @@ import { ASSISTANT_BY_ID, AssistantDef } from '@/src/config/assistants';
 import { useTheme } from '@/src/context/ThemeContext';
 import { fontSize, radius, spacing } from '@/src/theme/colors';
 import { ChatMsg, getConversation, sendChat, streamChat, StreamEvent } from '@/src/api/client';
+import { stripMarkdown } from '@/src/utils/markdown';
 
 interface Citation { title: string; url: string }
 interface UIMessage extends ChatMsg { id: string; citations?: Citation[]; streaming?: boolean; error?: boolean }
@@ -343,7 +344,7 @@ export default function ChatScreen() {
                     </View>
                   ) : (
                     <Text style={[styles.bubbleText, { color: isUser ? '#fff' : c.text }]} selectable>
-                      {m.content}
+                      {isUser ? m.content : stripMarkdown(m.content)}
                       {m.streaming && <BlinkingCursor color={c.primary} />}
                     </Text>
                   )}

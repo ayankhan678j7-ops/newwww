@@ -9,6 +9,7 @@ import { AIOrb } from '@/src/components/AIOrb';
 import { useTheme } from '@/src/context/ThemeContext';
 import { fontSize, radius, spacing } from '@/src/theme/colors';
 import { sendChat, stt, tts } from '@/src/api/client';
+import { stripMarkdown } from '@/src/utils/markdown';
 
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -61,7 +62,7 @@ export default function VoiceScreen() {
         messages: [{ role: 'user', content: transcript }],
         use_memory: true,
       });
-      const answer = chatRes.message.content;
+      const answer = stripMarkdown(chatRes.message.content);
       setReply(answer);
       setState('speaking');
 
