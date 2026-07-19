@@ -7,11 +7,12 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { AIOrb } from '@/src/components/AIOrb';
 import { fontSize, radius, spacing } from '@/src/theme/colors';
+import { startGoogleLogin } from '@/src/api/googleAuth';
 
 type Mode = 'signin' | 'signup';
 
 export default function AuthScreen() {
-  const { signInGuest, signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInGuest, signInWithEmail, signUpWithEmail, signInGoogle } = useAuth();
   const { c } = useTheme();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('signin');
@@ -46,11 +47,24 @@ export default function AuthScreen() {
     } finally { setBusy(false); }
   };
 
-  const handleGoogle = () => {
-    Alert.alert(
-      'Firebase Google Sign-In',
-      "Firebase Google Sign-In launches after you Publish and generate a native Android build (google-services.json is included).\n\nIn preview (Expo Go), please use email/password or Continue as Guest.",
-    );
+  const handleGoogle = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const profile = await startGoogleLogin();
+      // On web, startGoogleLogin triggers a full-page redirect and never
+      // resolves — we handle the return in the mount effect above.
+      if (!profile) {
+        if (Platform.OS !== 'web') setBusy(false);
+        return;
+      }
+      await signInGoogle(profile.name || profile.email.split('@')[0], profile.email);
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      Alert.alert('Google sign-in failed', e?.message ?? 'Unknown error');
+    } finally {
+      if (Platform.OS !== 'web') setBusy(false);
+    }
   };
 
   return (
