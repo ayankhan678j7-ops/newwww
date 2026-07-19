@@ -32,7 +32,7 @@ export default function Terms() {
         <P>We may update these Terms as the app evolves. Continued use after updates means you accept the changes.</P>
       </Section>
       <Section title="9. Contact">
-        <P>Email support@jarvis.ai for questions.</P>
+        <P>Email jarvisai9077@gmail.com for questions.</P>
       </Section>
     </StaticPage>
   );

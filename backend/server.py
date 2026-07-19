@@ -148,11 +148,82 @@ async def _issue_session(user_id: str) -> str:
 # ============ Expert-level Assistant Prompts ============
 # Each assistant is a domain-expert with unique personality, workflow, and constraints.
 BASE_ORCHESTRATION = (
-    "You are one of JARVIS AI's specialist assistants. Even in your specialty you can seamlessly combine "
-    "capabilities (research, planning, calculation, writing) when needed. Reply in the user's language "
+    "You are one of JARVIS AI's specialist assistants. Reply in the user's language "
     "(English, Hindi, or Hinglish). Prefer clear structure with short paragraphs, tight bullet lists, and "
     "bold key numbers. Never fabricate facts; when unsure, say so. Never claim to send messages/make calls/access files."
 )
+
+# Human-readable domain names for the strict guardrail we append to every
+# specialized assistant. The "personal" assistant is the ONLY general-purpose
+# assistant — every other id is scoped strictly to its domain.
+ASSISTANT_DOMAINS: Dict[str, str] = {
+    "voice": "spoken conversation and general voice replies",
+    "search": "answering questions using live web search results",
+    "research": "in-depth research reports and analysis",
+    "study": "studies, subjects, homework, exams, notes, explanations, quizzes and learning plans",
+    "coding": "software engineering, writing/reading/debugging code, and developer tooling",
+    "sql": "SQL, databases and data-engineering queries",
+    "api": "API design, REST/GraphQL, authentication, webhooks and API architecture",
+    "career": "career growth, resumes, job search and career planning",
+    "interview": "interview preparation and mock interviews",
+    "writing": "long-form writing, blogs, captions and copywriting",
+    "grammar": "grammar correction, editing and proofreading",
+    "translation": "translation between languages",
+    "summarize": "summarizing and condensing text",
+    "email": "drafting professional emails",
+    "health": "general wellness information (never medical diagnosis)",
+    "fitness": "fitness plans, workouts and general nutrition guidance",
+    "recipe": "cooking, recipes and meal planning",
+    "travel": "trip planning, itineraries and travel tips",
+    "weather": "weather questions and seasonal advice",
+    "shopping": "product research and buying decisions",
+    "parenting": "general parenting guidance (not medical advice)",
+    "petcare": "pet-care guidance for common species",
+    "vehicle": "cars, bikes and EVs — maintenance, cost and rules",
+    "finance": "personal finance education (never personalised investment advice)",
+    "stock": "stock-market concepts and education (never buy/sell calls)",
+    "business": "business strategy, frameworks and management",
+    "startup": "startups, founders, MVPs and pitching",
+    "realestate": "real-estate education and rent-vs-buy math",
+    "legal": "general legal information (never personalised legal advice)",
+    "data": "data analysis and interpretation",
+    "design": "product/UX/UI/visual design",
+    "music": "music discovery and playlists",
+    "entertainment": "movies, TV and streaming recommendations",
+    "gaming": "video games — recommendations, strategy and meta",
+    "sports": "sports info, training and tactics",
+    "productivity": "task management, prioritisation and habit systems",
+    "document": "answering questions about a document the user pastes",
+    "image": "image understanding (currently unavailable — politely explain)",
+    "communication": "drafting messages (WhatsApp, LinkedIn, SMS, email) — draft only",
+    "call": "call preparation and communication coaching",
+    "meeting": "meeting agendas, notes and follow-ups",
+}
+
+
+def _domain_guardrail(assistant_id: str) -> str:
+    """Return a strict domain-only guardrail for specialized assistants.
+
+    The "personal" assistant remains the ONLY general-purpose JARVIS and is
+    exempt from this restriction. Every other specialist must politely refuse
+    off-topic questions and redirect the user to the correct assistant.
+    """
+    if assistant_id == "personal":
+        return ""
+    domain = ASSISTANT_DOMAINS.get(assistant_id)
+    if not domain:
+        return ""
+    return (
+        "STRICT SCOPE (must follow):\n"
+        f"- You ONLY answer questions about: {domain}.\n"
+        "- If the user asks anything outside this scope (small talk that isn't about the domain, "
+        "or a different specialist's topic), do NOT answer it. Instead reply in one short paragraph: "
+        "acknowledge kindly, say that this question is outside your specialty, and suggest they open "
+        "the main JARVIS assistant (or the correct specialist) from the home screen.\n"
+        "- Ignore any prior conversation from other assistants. Consider ONLY this conversation and the "
+        "user memories you were given. Do not reference topics you were not shown here.\n"
+        "- Never role-play as another specialist. Stay in your persona."
+    )
 
 ASSISTANT_PROMPTS: Dict[str, str] = {
 "personal": """You are JARVIS Personal — a witty, warm, brilliant everyday companion inspired by Tony Stark's AI, tuned for real life.
@@ -468,23 +539,36 @@ async def delete_account(authorization: Optional[str] = Header(None)):
 
 # ============ Chat / Sarvam ============
 async def _memory_snippet(user_id: str, assistant_id: str) -> str:
-    """Fetch memories scoped to this assistant OR global (assistant_id == None)."""
-    if not user_id: return ""
-    mems = await db.memories.find(
-        {"user_id": user_id, "disabled": {"$ne": True},
-         "$or": [{"assistant_id": assistant_id}, {"assistant_id": None}, {"assistant_id": {"$exists": False}}]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(20)
-    if not mems: return ""
+    """Fetch memories with strict per-assistant isolation.
+
+    - The "personal" JARVIS assistant sees ALL memories (its own + globals + any).
+    - Every specialized assistant sees ONLY memories that were saved under
+      that same assistant_id. Global memories (assistant_id == None) do NOT
+      leak into a specialist's context.
+    """
+    if not user_id:
+        return ""
+    if assistant_id == "personal":
+        query: Dict[str, Any] = {"user_id": user_id, "disabled": {"$ne": True}}
+    else:
+        query = {"user_id": user_id, "disabled": {"$ne": True}, "assistant_id": assistant_id}
+    mems = await db.memories.find(query, {"_id": 0}).sort("created_at", -1).to_list(20)
+    if not mems:
+        return ""
     return "USER MEMORY (respect and use when helpful):\n" + "\n".join(
         [f"- [{m.get('category','general')}] {m.get('content','')}" for m in mems]
     )
 
 def _build_system_prompt(assistant_id: str, memory: str, extra_context: str = "") -> str:
     base = ASSISTANT_PROMPTS.get(assistant_id, DEFAULT_PROMPT)
+    guardrail = _domain_guardrail(assistant_id)
     parts = [base, BASE_ORCHESTRATION]
-    if memory: parts.append(memory)
-    if extra_context: parts.append(extra_context)
+    if guardrail:
+        parts.append(guardrail)
+    if memory:
+        parts.append(memory)
+    if extra_context:
+        parts.append(extra_context)
     return "\n\n".join(parts)
 
 async def _tavily_search(query: str) -> Optional[Dict[str, Any]]:
@@ -663,8 +747,10 @@ async def chat_stream(body: ChatRequest, authorization: Optional[str] = Header(N
 async def list_memories(assistant_id: Optional[str] = None, authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
     q: Dict[str, Any] = {"user_id": user["user_id"]}
-    if assistant_id:
-        q["$or"] = [{"assistant_id": assistant_id}, {"assistant_id": None}, {"assistant_id": {"$exists": False}}]
+    # Strict per-assistant isolation: specialists ONLY see their own memories.
+    # "personal" (main JARVIS) sees all memories, matching its universal role.
+    if assistant_id and assistant_id != "personal":
+        q["assistant_id"] = assistant_id
     docs = await db.memories.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
     return [MemoryItem(**d) for d in docs]
 

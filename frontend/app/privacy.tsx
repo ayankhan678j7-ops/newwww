@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
         <P>The app is not directed to children under 13. Parents must supervise usage by minors.</P>
       </Section>
       <Section title="8. Contact">
-        <P>Questions or requests? Email support@jarvis.ai from the address associated with your account.</P>
+        <P>Questions or requests? Email jarvisai9077@gmail.com from the address associated with your account.</P>
       </Section>
     </StaticPage>
   );

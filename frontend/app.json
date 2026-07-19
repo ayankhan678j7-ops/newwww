@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.jarvisecosystem.a2j693",
+      "bundleIdentifier": "online.zenresearch.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Talk to JARVIS with your voice"
       }
@@ -21,7 +21,7 @@
         "backgroundColor": "#0B0F19"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.jarvisecosystem.a2j693",
+      "package": "online.zenresearch.app",
       "permissions": [
         "RECORD_AUDIO",
         "INTERNET"
