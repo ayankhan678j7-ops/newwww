@@ -181,3 +181,16 @@
 ##     -agent: "testing"
 ##     -message: "Backend regression testing COMPLETE. All 10 tests passed. Retry logic verified working correctly: (1) Successful API calls complete quickly without retry delays (chat: 1.88s, search: 0.30s, tts: 2.05s, stream: 3.81s). (2) 4xx errors return immediately without retry (wrong password 401 in 0.35s). (3) All endpoints functional with real Sarvam AI + Tavily keys. MINOR FIX APPLIED: Updated Sarvam TTS from deprecated bulbul:v2 model to bulbul:v3 and changed default speaker from 'anushka' to 'priya' (anushka not compatible with v3). No regressions detected. Ready for user acceptance."
 
+##
+## frontend:
+##   - task: "Fix EAS Android build failure: missing yarn.lock"
+##     implemented: true
+##     working: true
+##     file: "/app/frontend/yarn.lock"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "EAS build failed: 'No lockfile found in the project directory'. Root cause: yarn.lock was missing from the workspace (only package-lock.json existed). Regenerated via 'yarn install' (940 entries, expo pinned 54.0.35). Verified Expo/Metro still runs and bundle compiles (200). yarn.lock is not gitignored, so it will be included in the next Publish source upload. package-lock.json left in place (harmless mixed-lockfile warning only)."
