@@ -19,10 +19,15 @@ export default function RootLayout() {
   const [loaded, error] = useIconFonts();
 
   useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
+    // The native splash (app icon) is kept up until the entry gate (app/index.tsx)
+    // resolves auth and redirects — this avoids any blank/loading flicker.
+    // Safety net: never let the splash stay stuck if the gate can't run (e.g. a
+    // direct deep-link cold start to a non-index route).
+    const t = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   if (!loaded && !error) return null;
 

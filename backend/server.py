@@ -102,7 +102,7 @@ class MemoryCreate(BaseModel):
 class TTSRequest(BaseModel):
     text: str
     language: str = "en-IN"
-    speaker: str = "anushka"
+    speaker: str = "priya"
 
 class SearchRequest(BaseModel):
     query: str
@@ -395,13 +395,14 @@ DEFAULT_PROMPT = ASSISTANT_PROMPTS["personal"]
 
 
 # ============ HTTP with retry (exponential backoff) ============
-async def http_with_retry(method: str, url: str, *, retries: int = 2,
-                          base_delay: float = 1.0, timeout: float = 60.0,
-                          **kwargs) -> httpx.Response:
+async def http_with_retry(method: str, url: str, *, retries: int = 7,
+                          base_delay: float = 1.0, max_delay: float = 8.0,
+                          timeout: float = 60.0, **kwargs) -> httpx.Response:
     """
-    Retry on network errors, timeouts, and 5xx. Do NOT retry on 4xx.
-    Total attempts = retries + 1 (default 3).
-    Delay = base_delay * 2**attempt (1s, 2s, 4s).
+    Retry ONLY on transient failures: network errors, timeouts, and 5xx.
+    Do NOT retry permanent errors (4xx — e.g. invalid/expired API keys, bad
+    request). Total attempts = retries + 1 (default 8).
+    Delay = min(base_delay * 2**attempt, max_delay) → 1s, 2s, 4s, 8s, 8s...
     """
     last_exc: Optional[Exception] = None
     for attempt in range(retries + 1):
@@ -409,15 +410,15 @@ async def http_with_retry(method: str, url: str, *, retries: int = 2,
             async with httpx.AsyncClient(timeout=timeout) as hc:
                 r = await hc.request(method, url, **kwargs)
             if r.status_code < 500:
-                return r  # success or 4xx (don't retry)
-            # 5xx → retry
+                return r  # success or 4xx (permanent — never retry)
+            # 5xx → transient, retry
             last_exc = HTTPException(status_code=502, detail=f"Upstream {r.status_code}: {r.text[:200]}")
-            logger.warning(f"[retry] {url} 5xx attempt {attempt+1}: {r.status_code}")
+            logger.warning(f"[retry] {url} 5xx attempt {attempt+1}/{retries+1}: {r.status_code}")
         except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError, httpx.ConnectError) as e:
             last_exc = e
-            logger.warning(f"[retry] {url} network attempt {attempt+1}: {e}")
+            logger.warning(f"[retry] {url} network attempt {attempt+1}/{retries+1}: {e}")
         if attempt < retries:
-            await asyncio.sleep(base_delay * (2 ** attempt))
+            await asyncio.sleep(min(base_delay * (2 ** attempt), max_delay))
     if isinstance(last_exc, HTTPException):
         raise last_exc
     raise HTTPException(status_code=502, detail=f"Upstream unavailable after retries: {last_exc}")
@@ -576,7 +577,7 @@ async def _tavily_search(query: str) -> Optional[Dict[str, Any]]:
     try:
         r = await http_with_retry(
             "POST", TAVILY_SEARCH_URL,
-            retries=2, base_delay=1.0, timeout=20,
+            retries=7, base_delay=1.0, timeout=20,
             json={"api_key": TAVILY_API_KEY, "query": query, "search_depth": "basic",
                   "max_results": 5, "include_answer": True},
         )
@@ -637,7 +638,7 @@ async def chat(body: ChatRequest, authorization: Optional[str] = Header(None)):
     sys_prompt = _build_system_prompt(body.assistant_id, memory, extra_context)
     payload, headers = await _sarvam_call(sys_prompt, [m.dict() for m in body.messages], stream=False)
 
-    r = await http_with_retry("POST", SARVAM_CHAT_URL, retries=2, base_delay=1.0, timeout=90,
+    r = await http_with_retry("POST", SARVAM_CHAT_URL, retries=7, base_delay=1.0, timeout=90,
                               json=payload, headers=headers)
     if r.status_code != 200:
         raise HTTPException(status_code=502, detail=f"Sarvam {r.status_code}: {r.text[:200]}")
@@ -685,16 +686,19 @@ async def chat_stream(body: ChatRequest, authorization: Optional[str] = Header(N
             yield (json.dumps({"type": "citations", "items": citations}) + "\n").encode()
 
         last_exc: Optional[Exception] = None
-        # Retry: only network/timeout/5xx for initial connect. Once streaming starts we don't retry mid-stream.
-        for attempt in range(3):
+        # Retry initial connect on network/timeout/5xx up to 8 attempts (capped backoff).
+        # Permanent errors (4xx — e.g. invalid API key) are NOT retried. Once streaming
+        # starts we don't retry mid-stream.
+        STREAM_ATTEMPTS = 8
+        for attempt in range(STREAM_ATTEMPTS):
             try:
                 async with httpx.AsyncClient(timeout=None) as hc:
                     async with hc.stream("POST", SARVAM_CHAT_URL, json=payload, headers=headers) as resp:
                         if resp.status_code >= 500:
                             last_exc = HTTPException(status_code=502, detail=f"Sarvam {resp.status_code}")
-                            logger.warning(f"[stream retry] Sarvam {resp.status_code} attempt {attempt+1}")
-                            if attempt < 2:
-                                await asyncio.sleep(2 ** attempt)
+                            logger.warning(f"[stream retry] Sarvam {resp.status_code} attempt {attempt+1}/{STREAM_ATTEMPTS}")
+                            if attempt < STREAM_ATTEMPTS - 1:
+                                await asyncio.sleep(min(2 ** attempt, 8))
                                 continue
                         if resp.status_code >= 400:
                             text = await resp.aread()
@@ -721,9 +725,9 @@ async def chat_stream(body: ChatRequest, authorization: Optional[str] = Header(N
                         break  # streamed successfully
             except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError, httpx.ConnectError) as e:
                 last_exc = e
-                logger.warning(f"[stream retry] net err attempt {attempt+1}: {e}")
-                if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)
+                logger.warning(f"[stream retry] net err attempt {attempt+1}/{STREAM_ATTEMPTS}: {e}")
+                if attempt < STREAM_ATTEMPTS - 1:
+                    await asyncio.sleep(min(2 ** attempt, 8))
                     continue
                 yield (json.dumps({"type": "error", "message": f"Network error: {e}"}) + "\n").encode()
                 return
@@ -815,7 +819,7 @@ async def search(body: SearchRequest, authorization: Optional[str] = Header(None
     if not TAVILY_API_KEY:
         raise HTTPException(status_code=500, detail="Tavily key missing")
     r = await http_with_retry(
-        "POST", TAVILY_SEARCH_URL, retries=2, base_delay=1.0, timeout=25,
+        "POST", TAVILY_SEARCH_URL, retries=7, base_delay=1.0, timeout=25,
         json={"api_key": TAVILY_API_KEY, "query": body.query, "search_depth": body.depth,
               "max_results": body.max_results, "include_answer": True},
     )
@@ -830,12 +834,12 @@ async def tts(body: TTSRequest, authorization: Optional[str] = Header(None)):
     await get_current_user(authorization)
     payload = {
         "text": body.text[:1500], "target_language_code": body.language,
-        "speaker": body.speaker, "model": "bulbul:v2",
+        "speaker": body.speaker, "model": "bulbul:v3",
         "pitch": 0, "pace": 1.0, "loudness": 1.0,
         "speech_sample_rate": 22050, "enable_preprocessing": True,
     }
     headers = {"api-subscription-key": SARVAM_VOICE_API_KEY, "Content-Type": "application/json"}
-    r = await http_with_retry("POST", SARVAM_TTS_URL, retries=2, base_delay=1.0, timeout=45,
+    r = await http_with_retry("POST", SARVAM_TTS_URL, retries=7, base_delay=1.0, timeout=45,
                               json=payload, headers=headers)
     if r.status_code != 200:
         raise HTTPException(status_code=502, detail=f"Sarvam TTS {r.status_code}: {r.text[:200]}")

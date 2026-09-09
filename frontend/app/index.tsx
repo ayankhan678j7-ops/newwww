@@ -1,50 +1,27 @@
 import { useEffect } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { Redirect } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
-import { useTheme } from '@/src/context/ThemeContext';
-import { AIOrb } from '@/src/components/AIOrb';
-import { fontSize, spacing } from '@/src/theme/colors';
 
+/**
+ * Entry gate. The NATIVE splash (app icon) stays visible until auth state is
+ * resolved, then we redirect straight to Home (signed-in) or the Sign In / Sign
+ * Up screen (not signed-in). No JS loading screen, no auth flicker.
+ * The login session is persisted (token in storage), so returning users always
+ * land directly on Home.
+ */
 export default function Index() {
   const { user, loading } = useAuth();
-  const { c } = useTheme();
-  const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    const t = setTimeout(() => {
-      if (user) router.replace('/(tabs)');
-      else router.replace('/auth');
-    }, 900);
-    return () => clearTimeout(t);
-  }, [loading, user, router]);
+    if (!loading) {
+      // Auth resolved — hide the native splash right before we redirect.
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [loading]);
 
-  return (
-    <View style={[styles.container, { backgroundColor: c.bg }]} testID="splash-screen">
-      <AIOrb size={180} active={false} />
-      <Text style={[styles.title, { color: c.text }]}>JARVIS AI</Text>
-      <Text style={[styles.subtitle, { color: c.textMuted }]}>Your all-in-one AI companion</Text>
-      {loading && <ActivityIndicator style={{ marginTop: 24 }} color={c.primary} />}
-    </View>
-  );
+  // While auth is resolving, render nothing — the native splash covers the screen.
+  if (loading) return null;
+
+  return <Redirect href={user ? '/(tabs)' : '/auth'} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  title: {
-    marginTop: spacing.xxl,
-    fontSize: fontSize.hero,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  subtitle: {
-    marginTop: spacing.sm,
-    fontSize: fontSize.md,
-  },
-});

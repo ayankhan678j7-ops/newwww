@@ -68,7 +68,7 @@ export default function VoiceScreen() {
 
       // TTS
       try {
-        const audio = await tts(answer, language, 'anushka');
+        const audio = await tts(answer, language, 'priya');
         const dataUri = `data:${audio.mime};base64,${audio.audio_base64}`;
         if (playerRef.current) { try { playerRef.current.remove(); } catch {} }
         const player = createAudioPlayer({ uri: dataUri });

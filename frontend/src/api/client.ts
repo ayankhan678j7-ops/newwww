@@ -197,7 +197,7 @@ export async function searchWeb(query: string): Promise<any> {
 }
 
 // ---- Voice ----
-export async function tts(text: string, language = 'en-IN', speaker = 'anushka'): Promise<{ audio_base64: string; mime: string }> {
+export async function tts(text: string, language = 'en-IN', speaker = 'priya'): Promise<{ audio_base64: string; mime: string }> {
   return await request('/tts', { method: 'POST', body: JSON.stringify({ text, language, speaker }) });
 }
 
