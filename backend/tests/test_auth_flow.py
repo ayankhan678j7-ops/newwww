@@ -4,7 +4,7 @@ import time
 import pytest
 import requests
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://zen-research-ai.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://mobile-deploy-253.preview.emergentagent.com').rstrip('/')
 TS = int(time.time())
 TEST_EMAIL = f"test+{TS}@example.com"
 TEST_PASSWORD = "TestPass123!"

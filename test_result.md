@@ -101,3 +101,43 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## user_problem_statement: "Run the mobile app (JARVIS AI) with user-provided Sarvam AI + Tavily API keys"
+## backend:
+##   - task: "Recreate backend/.env (was missing) with MONGO_URL, DB_NAME, SARVAM_API_KEY, TAVILY_API_KEY"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/.env"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: ".env files were lost. Recreated backend/.env. Verified: /api/ returns 42 assistants; guest auth issues token; /api/chat via Sarvam sarvam-105b returns real reply; /api/search via Tavily returns live results."
+## frontend:
+##   - task: "Recreate frontend/.env (EXPO_PACKAGER_PROXY_URL, EXPO_PACKAGER_HOSTNAME, EXPO_PUBLIC_BACKEND_URL) and run Expo"
+##     implemented: true
+##     working: true
+##     file: "/app/frontend/.env"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Expo restarted after .env creation. Splash screen renders, redirects to /auth. Auth screen verified visually: Sign in/Sign up tabs, email+password, Google, Guest, Privacy/Terms. NOTE: first load in dev mode takes ~30-45s (Metro lazy bundling); subsequent loads are cached/fast."
+## metadata:
+##   created_by: "main_agent"
+##   version: "1.0"
+##   test_sequence: 1
+##   run_ui: false
+## test_plan:
+##   current_focus:
+##     - "App running end-to-end"
+##   stuck_tasks: []
+##   test_all: false
+##   test_priority: "high_first"
+## agent_communication:
+##     -agent: "main"
+##     -message: "Both .env files were missing; recreated them with user-provided Sarvam + Tavily keys. Backend + Expo running. Sarvam chat and Tavily search verified live. Frontend renders splash + auth screens. No code changes made."
